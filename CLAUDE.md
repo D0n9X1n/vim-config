@@ -86,9 +86,9 @@ An empty grep result means no startup errors.
 
 ## Theme
 
-The active colorscheme is [Apollo](https://github.com/apollo-theme/vim-apollo-theme) — dark, truecolor with xterm-256 fallbacks. Other colorschemes stay installed as alternatives, so switching is a one-line edit in the theme section of `vimrc`.
+The active colorscheme is [Apollo](https://github.com/apollo-theme/vim-apollo-theme) — truecolor with xterm-256 fallbacks, in two variants: `apollo` (dark) and `apollo-light`, added upstream in v0.2.0. Other colorschemes stay installed as alternatives, so switching is a one-line edit in the theme section of `vimrc`.
 
-Apollo is dark-only and asserts `set background=dark` at the top of its `colors/apollo.vim`. Vim re-sources the active colorscheme whenever `background` changes, so flipping that option alone gets immediately undone by Apollo — leaving `&background` reading `light` while the canvas stays dark, and `g:colors_name` unset, which silently disables colorscheme reloading for the rest of the session. `SetBGColor()` (`<leader>b`) therefore names a colorscheme on *both* branches — gruvbox for light, Apollo for dark. Any future light/dark pairing has to do the same.
+Each variant asserts its own `set background=` line at the top of its colors file (`apollo.vim` sets `dark`, `apollo-light.vim` sets `light`). Vim re-sources the active colorscheme whenever `background` changes, so flipping that option alone is immediately undone by the variant that is already loaded — leaving `&background` disagreeing with the colors on screen, and `g:colors_name` unset, which silently disables colorscheme reloading for the rest of the session. `SetBGColor()` (`<leader>b`) therefore names a colorscheme on *both* branches. Any future light/dark pairing has to do the same.
 
 Highlight tweaks layered on top of the colorscheme live in `s:ApplyHighlightOverrides()` and re-apply from an `autocmd ColorScheme`. They have to: every colorscheme load issues `highlight clear`, so inline `hi!` statements survive only until the next `:colorscheme` — which `<leader>b` triggers. Add new overrides inside that function, not after the `colorscheme` call.
 

@@ -209,13 +209,14 @@ function! NumberToggle()
 endfunction
 
 " Toggle background between dark/light.
-" Both branches must name a colorscheme: Apollo asserts 'set background=dark'
-" itself, so flipping &background alone re-sources Apollo and leaves the option
-" disagreeing with the colors actually on screen.
+" Both branches must name a colorscheme: each Apollo variant asserts its own
+" 'set background=' line, so flipping the option alone re-sources the current
+" variant, which puts the option straight back and leaves it disagreeing with
+" the colors actually on screen.
 function! SetBGColor()
     if &background == 'dark'
         set background=light
-        colorscheme gruvbox
+        colorscheme apollo-light
     else
         set background=dark
         colorscheme apollo
