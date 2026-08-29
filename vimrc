@@ -209,16 +209,16 @@ function! NumberToggle()
 endfunction
 
 " Toggle background between dark/light.
-" Both branches must name a colorscheme: each Apollo variant asserts its own
-" 'set background=' line, so flipping the option alone re-sources the current
-" variant, which puts the option straight back and leaves it disagreeing with
-" the colors actually on screen.
+" Name the colorscheme and nothing else. Each Apollo variant asserts its own
+" 'set background=' line, so setting the option here is redundant on success
+" and harmful on failure: if the variant is missing -- an unpinned bundle/
+" checkout predating it -- the option flips while the old colors stay, and
+" g:colors_name is left unset, which kills colorscheme reloading for the rest
+" of the session. Naming only the scheme makes a failed switch a no-op.
 function! SetBGColor()
     if &background == 'dark'
-        set background=light
         colorscheme apollo-light
     else
-        set background=dark
         colorscheme apollo
     endif
 endfunction
