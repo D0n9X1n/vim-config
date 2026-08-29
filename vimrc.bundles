@@ -28,6 +28,7 @@ Plug 'Chiel92/vim-autoformat'
 " -------------------------------
 " Colorschemes
 " -------------------------------
+Plug 'apollo-theme/vim-apollo-theme'
 Plug 'MOSconfig/vim-solarized8'
 Plug 'MOSconfig/gruvbox'
 Plug 'chriskempson/base16-vim'

@@ -208,14 +208,17 @@ function! NumberToggle()
     endif
 endfunction
 
-" Toggle background between dark/light
+" Toggle background between dark/light.
+" Both branches must name a colorscheme: Apollo asserts 'set background=dark'
+" itself, so flipping &background alone re-sources Apollo and leaves the option
+" disagreeing with the colors actually on screen.
 function! SetBGColor()
     if &background == 'dark'
         set background=light
-        " colorscheme solarized
+        colorscheme gruvbox
     else
         set background=dark
-        " colorscheme gruvbox
+        colorscheme apollo
     endif
 endfunction
 
@@ -494,16 +497,15 @@ let &t_EI.="\e[1 q" "EI = NORMAL mode (ELSE)
 
 set background=dark
 
-let g:gruvbox_contrast_dark='light'
-colorscheme gruvbox
+colorscheme apollo
 
 " GUI-specific settings
 if has("gui_running")
     set guifont=FiraCode\ Nerd\ Font:h14.5
-    colorscheme solarized8_flat
+    colorscheme apollo
     if has("gui_gtk2")
         set guifont=FiraCode\ Nerd\ Font:h14.5
-        colorscheme solarized8_flat
+        colorscheme apollo
     endif
 endif
 
