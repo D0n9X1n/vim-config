@@ -509,20 +509,34 @@ if has("gui_running")
     endif
 endif
 
-" Match sign column background to line number column
-hi! link SignColumn   LineNr
-hi! link ShowMarksHLl DiffAdd
-hi! link ShowMarksHLu DiffChange
+" Highlight overrides layered on top of whichever colorscheme is active.
+" Every colorscheme load issues 'highlight clear', so these must re-apply on
+" the ColorScheme event -- inline statements survive only until the next
+" :colorscheme, which <leader>b triggers.
+function! s:ApplyHighlightOverrides()
+    " Match sign column background to line number column
+    hi! link SignColumn   LineNr
+    hi! link ShowMarksHLl DiffAdd
+    hi! link ShowMarksHLu DiffChange
 
-" Softer spell-check highlights
-highlight clear SpellBad
-highlight SpellBad   term=standout ctermfg=1 term=underline cterm=underline
-highlight clear SpellCap
-highlight SpellCap   term=underline cterm=underline
-highlight clear SpellRare
-highlight SpellRare  term=underline cterm=underline
-highlight clear SpellLocal
-highlight SpellLocal term=underline cterm=underline
+    " Softer spell-check highlights
+    highlight clear SpellBad
+    highlight SpellBad   term=standout ctermfg=1 term=underline cterm=underline
+    highlight clear SpellCap
+    highlight SpellCap   term=underline cterm=underline
+    highlight clear SpellRare
+    highlight SpellRare  term=underline cterm=underline
+    highlight clear SpellLocal
+    highlight SpellLocal term=underline cterm=underline
+endfunction
+
+augroup MyHighlightOverrides
+    autocmd!
+    autocmd ColorScheme * call s:ApplyHighlightOverrides()
+augroup END
+
+" The colorscheme above has already loaded, so apply once for this session.
+call s:ApplyHighlightOverrides()
 
 " Remap left/right again here for buffer navigation (overrides earlier <Nop>)
 noremap <left>  :bp<CR>

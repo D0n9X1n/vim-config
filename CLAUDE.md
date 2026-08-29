@@ -13,9 +13,7 @@ A personal Vim configuration. There is no build, no package manager, and no test
 ~/.vimrc.private  -> <repo>/vimrc.private   (untracked)
 ```
 
-`install.sh` date-stamps and moves aside real files, unlinks existing symlinks, then recreates all four links. Re-running it on an already-installed machine is safe.
-
-**It is not safe on a machine that has a real `~/.vimrc.private`.** The backup and unlink loops (`install.sh:17-18`) cover `~/.vim`, `~/.vimrc`, `~/.gvimrc`, and `~/.vimrc.bundles` — but not `~/.vimrc.private`, which line 25 then symlinks over with `ln -sf`. A pre-existing file there is destroyed with no dated backup. Verified against a sandboxed `HOME`: a real `~/.vimrc.private` was replaced by the symlink, and no `.vimrc.private.<date>` was written. Adding `$HOME/.vimrc.private` to both loops fixes it.
+`install.sh` date-stamps and moves aside real files, unlinks existing symlinks, then recreates the links. Re-running it is safe. Its backup and unlink loops cover five paths — the four above plus `~/.gvimrc`, which is cleared but never re-linked — so a pre-existing real file at any of them is preserved as `<path>.<YYYYMMDD>` before being replaced.
 
 ## Load order
 
@@ -33,7 +31,7 @@ Consequences for editing:
 
 - A new plugin **and its configuration** go in `vimrc.bundles`, grouped under the existing banner comments.
 - Editor options, key mappings, filetype rules, and the colorscheme go in `vimrc`.
-- `plug#end()` runs `filetype plugin indent on` and `syntax enable`, so anything that must override plugin defaults — the `hi! link` and `highlight Spell*` statements at the end of `vimrc` — has to stay after the `colorscheme` call.
+- `plug#end()` runs `filetype plugin indent on` and `syntax enable`, so anything overriding plugin defaults belongs after it. Highlight overrides specifically go in `s:ApplyHighlightOverrides()` near the end of `vimrc` — see [Theme](#theme) for why they cannot be inline.
 
 ## Tracked vs. generated
 
@@ -92,7 +90,7 @@ The active colorscheme is [Apollo](https://github.com/apollo-theme/vim-apollo-th
 
 Apollo is dark-only and asserts `set background=dark` at the top of its `colors/apollo.vim`. Vim re-sources the active colorscheme whenever `background` changes, so flipping that option alone gets immediately undone by Apollo — leaving `&background` reading `light` while the canvas stays dark, and `g:colors_name` unset, which silently disables colorscheme reloading for the rest of the session. `SetBGColor()` (`<leader>b`) therefore names a colorscheme on *both* branches — gruvbox for light, Apollo for dark. Any future light/dark pairing has to do the same.
 
-Known quirk, pre-dating the Apollo switch: the `hi! link` and `highlight Spell*` overrides at the end of `vimrc` run once at startup, and every colorscheme reload issues `highlight clear`, which drops them. So `<leader>b` loses the sign-column link and the softened spell highlights until Vim restarts. Fixing it means re-applying them from an `autocmd ColorScheme` rather than inline.
+Highlight tweaks layered on top of the colorscheme live in `s:ApplyHighlightOverrides()` and re-apply from an `autocmd ColorScheme`. They have to: every colorscheme load issues `highlight clear`, so inline `hi!` statements survive only until the next `:colorscheme` — which `<leader>b` triggers. Add new overrides inside that function, not after the `colorscheme` call.
 
 Apollo ships its own checks, runnable from its checkout:
 
