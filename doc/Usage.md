@@ -1,6 +1,7 @@
 # 插件管理
 
-使用 [vim-plug](https://github.com/junegunn/vim-plug) 管理插件
+使用本仓库维护的 [vim-plug](https://github.com/junegunn/vim-plug) 分支 (`autoload/plug.vim`) 管理插件。
+它优先节省磁盘: 插件只保留最新一个提交 (depth 1, 单分支, 无 tag), 每次 `:PlugUpdate` 后自动回收旧历史。
 
 `vim-plug` 常见问题: [vim-plug faq](https://github.com/junegunn/vim-plug/wiki/faq) / [YCM timeout](https://github.com/junegunn/vim-plug/wiki/faq#youcompleteme-timeout)
 
@@ -10,7 +11,8 @@
 :PlugInstall     install                      安装插件
 :PlugUpdate      install or update            更新插件
 :PlugClean       remove plugin not in list    删除本地无用插件
-:PlugUpgrade     Upgrade vim-plug itself      升级本身
+:PlugUpgrade     Disabled: plug.vim is a fork 已停用, 本地维护
+:PlugCompact     Shrink checkouts in place    就地压缩插件仓库 (不更新)
 :PlugStatus      Check the status of plugins  查看插件状态
 ```
 

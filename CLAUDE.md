@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-A personal Vim configuration. There is no build, no package manager, and no test suite. The repository **is** the live Vim runtime directory: `install.sh` symlinks the checkout itself to `~/.vim`, so an edit to a tracked file changes the running editor on the next Vim start. Nothing needs to be "deployed".
+`vim-config` ([D0n9X1n/vim-config](https://github.com/D0n9X1n/vim-config)) is a personal Vim configuration. There is no build, no package manager, and no test suite. The repository **is** the live Vim runtime directory: `install.sh` symlinks the checkout itself to `~/.vim`, so an edit to a tracked file changes the running editor on the next Vim start. Nothing needs to be "deployed".
 
 ```
 ~/.vim            -> <repo root>
@@ -39,11 +39,24 @@ Only the configuration files are tracked — about twenty. `bundle/` holds 50 pl
 
 `.gitignore` is a 4000-line concatenation of upstream language templates, and the rules that actually matter for this repo are scattered inside it (`bundle/` is at line 4060). Grep it rather than reading it, and prefer `git check-ignore -v <path>` to decide whether something is ignored. Note that `view/` appears in `.gitignore` but already has a tracked file committed under it — tracked files win over ignore rules.
 
-`autoload/plug.vim` is an exception: a vendored, tracked copy of vim-plug, updated with `:PlugUpgrade`. `UltiSnips/` holds hand-written snippets and is tracked.
+`autoload/plug.vim` is an exception: a tracked fork of vim-plug that this repository maintains. `UltiSnips/` holds hand-written snippets and is tracked.
 
 ## Plugin management
 
-Run inside Vim: `:PlugInstall`, `:PlugUpdate`, `:PlugClean` (removes checkouts no longer declared), `:PlugStatus`, `:PlugUpgrade`.
+Run inside Vim: `:PlugInstall`, `:PlugUpdate`, `:PlugClean` (removes checkouts no longer declared), `:PlugStatus`, `:PlugCompact`.
+
+`autoload/plug.vim` is a fork, edited here and never re-downloaded: `:PlugUpgrade` only prints a notice, so upstream fixes have to be ported by hand. The fork is storage-first. Its header comment lists the changes from upstream, and `autoload/plug-compact.sh` does the git work:
+
+- `vimrc` sets `g:plug_shallow = 1`, so clones are depth 1, single-branch, and tagless.
+- `:PlugUpdate` fetches only the new tip, then `reset --keep`s to it — never `merge --ff-only`, which fails across depth-1 histories. It then drops old commits, other branches, tags, and reflogs, and runs `gc`, so a plugin holds one commit plus the previous tip that `HEAD@{1}`, `:PlugDiff`, and revert (`X`) read. Submodules get the same treatment.
+- `:PlugCompact [names]` shrinks existing checkouts in place without moving them.
+- Plugins pinned with `tag` or `commit` keep upstream's deep-history behavior.
+
+Two consequences. A plugin with uncommitted local edits that conflict with an update fails that update (`reset --keep` refuses) instead of losing the edits. And `gc --prune=now` assumes one writer, so do not run `:PlugUpdate` in two Vims at once.
+
+Most of `bundle/` is not git: `YouCompleteMe/third_party/ycmd` holds about 690M of downloaded completers (clangd, libclang, omnisharp, Go), which no plug.vim change reclaims.
+
+Verify plug.vim changes with a headless run against local `file://` bare repos (vim-plug accepts any git URL): install, update, `:PlugDiff`, `:PlugStatus`, `:PlugClean`, asserting on `git rev-list --count --all` and `.git/shallow` in each checkout.
 
 ## Two traps when verifying from a shell
 

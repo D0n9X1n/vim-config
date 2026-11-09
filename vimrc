@@ -19,6 +19,9 @@ syntax on
 " ====================================================================
 " Add plugins to &runtimepath
 " ====================================================================
+" Storage-first: depth-1, single-branch clones, compacted on every
+" :PlugUpdate (see the header of autoload/plug.vim)
+let g:plug_shallow = 1
 call plug#begin('~/.vim/bundle')
 
 " Main plugin configuration

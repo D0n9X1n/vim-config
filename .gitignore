@@ -4059,3 +4059,6 @@ cscope.po.out
 
 bundle
 view
+
+# Backup left by upstream :PlugUpgrade; the forked plug.vim no longer makes one
+/autoload/plug.vim.old

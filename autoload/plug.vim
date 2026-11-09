@@ -1,6 +1,21 @@
 " vim-plug: Vim plugin manager
 " ============================
 "
+" LOCAL FORK. This copy is maintained in this repository and is no longer
+" synced with junegunn/vim-plug: :PlugUpgrade only prints a notice. Changes
+" from upstream are storage-first, for the Vim job backend (Vim 8+/Neovim):
+"   - Clones are depth 1 and single-branch, with no tags (g:plug_shallow).
+"   - :PlugUpdate fetches only the new branch tip at depth 1, moves to it with
+"     `reset --keep`, then drops old commits, tags and reflogs and runs gc
+"     (autoload/plug-compact.sh), so a plugin keeps one commit plus the
+"     previous tip that HEAD@{1}, PlugDiff and revert (X) use.
+"   - Submodules are fetched at depth 1 and compacted the same way.
+"   - Never dropped: local branches, stashes, uncommitted edits (reset --keep
+"     refuses), and unpublished commits (the update stops instead).
+"   - :PlugCompact shrinks existing checkouts in place without updating them.
+" Plugins pinned with 'tag' or 'commit', g:plug_shallow = 0, and the legacy
+" Python/Ruby backends keep upstream behavior.
+"
 " 1. Download plug.vim and put it in 'autoload' directory
 "
 "   # Vim
@@ -61,7 +76,6 @@ let g:loaded_plug = 1
 let s:cpo_save = &cpo
 set cpo&vim
 
-let s:plug_src = 'https://github.com/junegunn/vim-plug.git'
 let s:plug_tab = get(s:, 'plug_tab', -1)
 let s:plug_buf = get(s:, 'plug_buf', -1)
 let s:mac_gui = has('gui_macvim') && has('gui_running')
@@ -76,6 +90,7 @@ if s:is_win && &shellslash
 else
   let s:me = resolve(expand('<sfile>:p'))
 endif
+let s:compact_sh = fnamemodify(s:me, ':h').'/plug-compact.sh'
 let s:base_spec = { 'branch': '', 'frozen': 0 }
 let s:TYPE = {
 \   'string':  type(''),
@@ -249,7 +264,8 @@ function! s:define_commands()
   command! -nargs=* -bar -bang -complete=customlist,s:names PlugInstall call s:install(<bang>0, [<f-args>])
   command! -nargs=* -bar -bang -complete=customlist,s:names PlugUpdate  call s:update(<bang>0, [<f-args>])
   command! -nargs=0 -bar -bang PlugClean call s:clean(<bang>0)
-  command! -nargs=0 -bar PlugUpgrade if s:upgrade() | execute 'source' s:esc(s:me) | endif
+  command! -nargs=0 -bar PlugUpgrade call s:upgrade()
+  command! -nargs=* -bar -complete=customlist,s:names PlugCompact call s:compact([<f-args>])
   command! -nargs=0 -bar PlugStatus  call s:status()
   command! -nargs=0 -bar PlugDiff    call s:diff()
   command! -nargs=? -bar -bang -complete=file PlugSnapshot call s:snapshot(<bang>0, <f-args>)
@@ -1318,10 +1334,12 @@ function! s:update_finish()
         let out = s:system('git checkout -q '.plug#shellescape(tag).' -- 2>&1', spec.dir)
         let error = s:shell_error
       endif
+      " Shallow mode visits submodules on every pull so they get compacted
       if !error && filereadable(spec.dir.'/.gitmodules') &&
-            \ (s:update.force || has_key(s:update.new, name) || s:is_updated(spec.dir))
+            \ (s:update.force || has_key(s:update.new, name) || s:is_updated(spec.dir)
+            \  || (s:update.pull && s:compactable(spec)))
         call s:log4(name, 'Updating submodules. This may take a while.')
-        let out .= s:bang('git submodule update --init --recursive'.s:submodule_opt.' 2>&1', spec.dir)
+        let out .= s:update_submodules(spec)
         let error = v:shell_error
       endif
       let msg = s:format_message(error ? 'x': '-', name, out)
@@ -1573,6 +1591,50 @@ function! s:merge_command(spec)
   return ['git', 'merge', '--ff-only', 'origin/'.a:spec.branch]
 endfunction
 
+function! s:shallow()
+  return get(g:, 'plug_shallow', 1)
+endfunction
+
+function! s:compactable(spec)
+  return s:shallow() && !has_key(a:spec, 'tag') && !has_key(a:spec, 'commit')
+endfunction
+
+function! s:compact_env()
+  return s:disable_credential_helper() ? ['env', 'PLUG_NO_CREDENTIAL_HELPER=1'] : []
+endfunction
+
+" Depth-1 fetch of the branch tip plus cleanup. Runs before checkout/reset so
+" the old tip stays reachable as HEAD@{1}. Without an explicit branch the
+" script resolves the remote's default branch and records it as origin/HEAD,
+" which s:git_origin_branch then reads for the checkout and reset steps.
+function! s:compact_fetch_command(spec)
+  let prog = s:progress_opt(s:nvim || s:vim8)
+  return s:compact_env() + ['sh', s:compact_sh, 'fetch', a:spec.branch] + (empty(prog) ? [] : [prog])
+endfunction
+
+" A depth-1 fetch shares no history with the old tip, so --ff-only would fail.
+" The script checks out the branch and `reset --keep`s it to origin: that moves
+" it like a fast-forward, refuses to overwrite local edits, and leaves the
+" single reflog entry that HEAD@{1} relies on.
+function! s:compact_move_command(spec)
+  return ['sh', s:compact_sh, 'move', s:git_origin_branch(a:spec)]
+endfunction
+
+function! s:update_submodules(spec)
+  let update = 'git submodule update --init --recursive'.get(s:, 'submodule_opt', '')
+  if !s:compactable(a:spec)
+    return s:bang(update.' 2>&1', a:spec.dir)
+  endif
+  " Depth-1 fetch of a pinned commit needs protocol v2; retry in full if not
+  let out = s:bang(update.' --depth 1 2>&1 || '.update.' 2>&1', a:spec.dir)
+  if v:shell_error
+    return out
+  endif
+  let env = join(map(s:compact_env(), 'plug#shellescape(v:val)'))
+  return s:bang(printf('git submodule foreach -q --recursive %s 2>&1',
+        \ plug#shellescape(env.(empty(env) ? '' : ' ').'sh '.plug#shellescape(s:compact_sh).' sub')), a:spec.dir)
+endfunction
+
 function! s:tick()
   let pull = s:update.pull
   let prog = s:progress_opt(s:nvim || s:vim8)
@@ -1616,7 +1678,9 @@ while 1 " Without TCO, Vim stack is bound to explode
           call add(cmd, prog)
         endif
         let queue = [cmd, split('git remote set-head origin -a')]
-        if !has_tag && !has_key(spec, 'commit')
+        if s:compactable(spec)
+          let queue = [function('s:compact_fetch_command'), function('s:compact_move_command')]
+        elseif !has_tag && !has_key(spec, 'commit')
           call extend(queue, [function('s:checkout_command'), function('s:merge_command')])
         endif
         call s:spawn(name, spec, queue, { 'dir': spec.dir })
@@ -1628,7 +1692,14 @@ while 1 " Without TCO, Vim stack is bound to explode
     endif
   else
     let cmd = ['git', 'clone']
-    if !has_tag
+    if s:compactable(spec)
+      " Storage-first: --depth alone implies one branch; no tags so they pin
+      " no extra commits. Pinned plugins keep the upstream options below.
+      call extend(cmd, filter(copy(s:clone_opt), 'v:val !=# "--no-single-branch"') + ['--no-tags'])
+      if len(spec.branch)
+        call extend(cmd, ['--branch', spec.branch])
+      endif
+    elseif !has_tag
       call extend(cmd, s:clone_opt)
     endif
     if !empty(prog)
@@ -2451,6 +2522,12 @@ function! s:git_validate(spec, check_branch)
           let err = "Failed to compare with the origin. The default branch might have changed.\nPlugClean required."
         else
           let [ahead, behind] = ahead_behind
+          " In a depth-1 clone, a HEAD left at an older shallow root (revert X,
+          " or an update not applied yet) shares no history with origin, so
+          " rev-list counts it as ahead. It holds no local commits.
+          if ahead == 1 && s:is_shallow_root(a:spec.dir)
+            let ahead = 0
+          endif
           if ahead && behind
             " Only mention PlugClean if diverged, otherwise it's likely to be
             " pushable (and probably not that messed up).
@@ -2469,6 +2546,15 @@ function! s:git_validate(spec, check_branch)
     let err = 'Not found'
   endif
   return [err, err =~# 'PlugClean']
+endfunction
+
+function! s:is_shallow_root(dir)
+  let gitdir = s:git_dir(a:dir)
+  let shallow = gitdir.'/shallow'
+  if empty(gitdir) || !filereadable(shallow)
+    return 0
+  endif
+  return index(readfile(shallow), s:git_revision(a:dir)) >= 0
 endfunction
 
 function! s:rm_rf(dir)
@@ -2592,30 +2678,49 @@ function! s:delete(range, force)
 endfunction
 
 function! s:upgrade()
-  echo 'Downloading the latest version of vim-plug'
-  redraw
-  let tmp = s:plug_tempname()
-  let new = tmp . '/plug.vim'
+  echo 'plug.vim is a local fork maintained in this config repository; :PlugUpgrade does not download upstream.'
+  echo 'Edit '.s:me.' (and '.s:compact_sh.') directly.'
+  return 0
+endfunction
 
-  try
-    let out = s:system(['git', 'clone', '--depth', '1', s:plug_src, tmp])
+" Shrink existing checkouts to their current commit without updating them:
+" depth-1 history, one branch, no tags or reflogs, then gc. Submodules too.
+function! s:compact(names)
+  if !s:shallow()
+    return s:err('PlugCompact requires g:plug_shallow')
+  endif
+  let names = empty(a:names) ? sort(keys(g:plugs)) : a:names
+  let [done, skipped, failed] = [0, [], []]
+  for name in names
+    let spec = get(g:plugs, name, {})
+    if empty(spec) || !s:is_managed(name) || !isdirectory(spec.dir.'/.git')
+          \ || get(spec, 'frozen', 0) || !s:compactable(spec)
+      call add(skipped, name)
+      continue
+    endif
+    echo printf('PlugCompact (%d/%d) %s', done + len(failed) + 1, len(names) - len(skipped), name)
+    redraw
+    let branch = s:git_origin_branch(spec)
+    if empty(branch)
+      call add(failed, name.': no branch (detached HEAD?)')
+      continue
+    endif
+    let out = s:system(s:compact_env() + ['sh', s:compact_sh, 'keep', branch], spec.dir)
+    if !s:shell_error && filereadable(spec.dir.'/.gitmodules')
+      let out = s:update_submodules(spec)
+      let s:shell_error = v:shell_error
+    endif
     if s:shell_error
-      return s:err('Error upgrading vim-plug: '. out)
-    endif
-
-    if readfile(s:me) ==# readfile(new)
-      echo 'vim-plug is already up-to-date'
-      return 0
+      call add(failed, name.': '.s:lastline(out))
     else
-      call rename(s:me, s:me . '.old')
-      call rename(new, s:me)
-      unlet g:loaded_plug
-      echo 'vim-plug has been upgraded'
-      return 1
+      let done += 1
     endif
-  finally
-    silent! call s:rm_rf(tmp)
-  endtry
+  endfor
+  redraw
+  echo printf('PlugCompact: %d compacted, %d skipped (pinned/unmanaged/missing), %d failed', done, len(skipped), len(failed))
+  for msg in failed
+    echohl ErrorMsg | echo msg | echohl None
+  endfor
 endfunction
 
 function! s:upgrade_specs()

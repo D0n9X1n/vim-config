@@ -1,11 +1,11 @@
-m-vim.vimrc
+vim-config
 ---
 
-![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/D0n9x1n/m-vim.vimrc?include_prereleases)
+![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/D0n9X1n/vim-config?include_prereleases)
 
-Yet, just another vim config project.
+Yet, just another vim config project for vimers.
 
-This is the vim config project which fits myself. Hope you will like it.
+This is the vim-config project which fits myself. Hope you will like it.
 
 ### How to install
 
@@ -44,7 +44,13 @@ brew install node
 npm install jshint -g
 npm install jslint -g
 ```
-#### Then use sh install.sh it will auto-install.
+#### Then clone vim-config and run install.sh
+
+```
+git clone https://github.com/D0n9X1n/vim-config.git
+cd vim-config
+sh install.sh
+```
 
 *Sorry, I have no other device to test centos or other release version of Linux or Windows*
 
