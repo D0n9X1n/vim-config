@@ -1,7 +1,7 @@
 vim-config
 ---
 
-![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/D0n9X1n/vim-config?include_prereleases)
+![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/MOSconfig/vim-config?include_prereleases)
 
 Yet, just another vim config project for vimers.
 
@@ -47,7 +47,7 @@ npm install jslint -g
 #### Then clone vim-config and run install.sh
 
 ```
-git clone https://github.com/D0n9X1n/vim-config.git
+git clone https://github.com/MOSconfig/vim-config.git
 cd vim-config
 sh install.sh
 ```
