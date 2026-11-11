@@ -2507,7 +2507,10 @@ function! s:git_validate(spec, check_branch)
       endif
     elseif has_key(a:spec, 'tag')
       let tag = s:system_chomp('git describe --exact-match --tags HEAD 2>&1', a:spec.dir)
+      " describe names only one tag. When several tags share HEAD (a
+      " monorepo tags every app on one commit), compare the pinned tag's commit.
       if a:spec.tag !=# tag && a:spec.tag !~ '\*'
+            \ && s:git_revision(a:spec.dir) !=# s:system_chomp(['git', 'rev-parse', '--verify', '-q', a:spec.tag.'^{commit}'], a:spec.dir)
         let err = printf('Invalid tag: %s (expected: %s). Try PlugUpdate.',
               \ (empty(tag) ? 'N/A' : tag), a:spec.tag)
       endif
