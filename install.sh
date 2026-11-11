@@ -41,18 +41,25 @@ if [ -n "$VIM_BIN" ] && "$VIM_BIN" --version 2>/dev/null | head -n 1 | grep -q '
 set nocompatible
 set runtimepath^=~/.vim
 call plug#begin('~/.vim/bundle')
-if filereadable(expand("~/.vimrc.bundles"))
-    source ~/.vimrc.bundles
-endif
-if filereadable(expand("~/.vimrc.private"))
-    source ~/.vimrc.private
-endif
+" Inside :try, any error in a declaration file aborts it; the plugin list is
+" written only when both files loaded, so a broken overlay removes nothing.
+let g:prune_declarations_ok = 0
+try
+    if filereadable(expand("~/.vimrc.bundles"))
+        source ~/.vimrc.bundles
+    endif
+    if filereadable(expand("~/.vimrc.private"))
+        source ~/.vimrc.private
+    endif
+    let g:prune_declarations_ok = 1
+catch
+endtry
 call plug#end()
 VIM
     "$VIM_BIN" -N -u "$PRUNE_DIR/init.vim" -i NONE -c 'PlugInstall --sync' -c 'qa!' </dev/null >/dev/null 2>&1 || true
     export VIM_PRUNE_DECLARED="$PRUNE_DIR/declared"
     "$VIM_BIN" -N -u "$PRUNE_DIR/init.vim" -i NONE -es \
-        -c 'call writefile(map(values(g:plugs), {_, p -> fnamemodify(substitute(p.dir, "/$", "", ""), ":t")}), $VIM_PRUNE_DECLARED)' \
+        -c 'if g:prune_declarations_ok | call writefile(map(values(g:plugs), {_, p -> fnamemodify(substitute(p.dir, "/$", "", ""), ":t")}), $VIM_PRUNE_DECLARED) | endif' \
         -c 'qa!' </dev/null >/dev/null 2>&1 || true
     if [ -s "$VIM_PRUNE_DECLARED" ]; then
         "$BASH" "$CURRENT_DIR/tools/prune-plugins.sh" "$HOME/.vim/bundle" "$VIM_PRUNE_DECLARED" || true
