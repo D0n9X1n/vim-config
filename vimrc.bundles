@@ -28,7 +28,8 @@ Plug 'Chiel92/vim-autoformat'
 " -------------------------------
 " Colorschemes
 " -------------------------------
-Plug 'apollo-theme/apollo-theme', { 'rtp': 'vim' }
+" Apollo: the vim/ folder of the monorepo, pinned to its vim-vX.Y.Z release tag.
+Plug 'apollo-theme/apollo-theme', { 'rtp': 'vim', 'tag': 'vim-v0.2.1' }
 Plug 'MOSconfig/vim-solarized8'
 Plug 'MOSconfig/gruvbox'
 Plug 'chriskempson/base16-vim'
