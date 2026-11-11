@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-`vim-config` ([D0n9X1n/vim-config](https://github.com/D0n9X1n/vim-config)) is a personal Vim configuration. There is no build, no package manager, and no test suite. The repository **is** the live Vim runtime directory: `install.sh` symlinks the checkout itself to `~/.vim`, so an edit to a tracked file changes the running editor on the next Vim start. Nothing needs to be "deployed".
+`vim-config` ([MOSconfig/vim-config](https://github.com/MOSconfig/vim-config)) is a personal Vim configuration. There is no build, no package manager, and no test suite. The repository **is** the live Vim runtime directory: `install.sh` symlinks the checkout itself to `~/.vim`, so an edit to a tracked file changes the running editor on the next Vim start. Nothing needs to be "deployed".
 
 ```
 ~/.vim            -> <repo root>
@@ -99,7 +99,7 @@ An empty grep result means no startup errors.
 
 ## Theme
 
-The active colorscheme is [Apollo](https://github.com/apollo-theme/vim-apollo-theme) — truecolor with xterm-256 fallbacks, in two variants: `apollo` (dark) and `apollo-light`, added upstream in v0.2.0. Other colorschemes stay installed as alternatives, so switching is a one-line edit in the theme section of `vimrc`.
+The active colorscheme is [Apollo](https://github.com/apollo-theme/apollo-theme/tree/main/vim) (the `vim/` folder of the Apollo monorepo, loaded with vim-plug's `'rtp': 'vim'` and pinned to its `vim-vX.Y.Z` release tag; take a new release by bumping `'tag'` and running `:PlugUpdate`) — truecolor with xterm-256 fallbacks, in two variants: `apollo` (dark) and `apollo-light`, added upstream in v0.2.0. Other colorschemes stay installed as alternatives, so switching is a one-line edit in the theme section of `vimrc`.
 
 Each variant asserts its own `set background=` line at the top of its colors file (`apollo.vim` sets `dark`, `apollo-light.vim` sets `light`), so `SetBGColor()` (`<leader>b`) names the colorscheme and nothing else. Setting the option alongside it is redundant on success and harmful on failure: `bundle/` is gitignored and unpinned, so a checkout predating a variant is possible, and on `E185` the option would flip while the old colors stayed — leaving `&background` disagreeing with the screen and `g:colors_name` unset, which silently disables colorscheme reloading for the rest of the session. Naming only the scheme makes a failed switch a no-op. Any future light/dark pairing has to do the same.
 
@@ -108,6 +108,6 @@ Highlight tweaks layered on top of the colorscheme live in `s:ApplyHighlightOver
 Apollo ships its own checks, runnable from its checkout:
 
 ```sh
-cd ~/.vim/bundle/vim-apollo-theme
+cd ~/.vim/bundle/apollo-theme/vim
 /opt/homebrew/bin/vim -Nu NONE -n -es -i NONE -S tests/headless.vim
 ```

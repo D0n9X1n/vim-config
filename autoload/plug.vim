@@ -1677,6 +1677,11 @@ while 1 " Without TCO, Vim stack is bound to explode
         if !empty(prog)
           call add(cmd, prog)
         endif
+        " A clone from the untagged storage-first path has tagOpt=--no-tags,
+        " so a later tag pin must fetch that tag by name.
+        if has_tag && spec.tag !~ '\*'
+          call extend(cmd, ['origin', '+refs/tags/'.spec.tag.':refs/tags/'.spec.tag])
+        endif
         let queue = [cmd, split('git remote set-head origin -a')]
         if s:compactable(spec)
           let queue = [function('s:compact_fetch_command'), function('s:compact_move_command')]
