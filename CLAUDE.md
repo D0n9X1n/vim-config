@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-`vim-config` ([MOSconfig/vim-config](https://github.com/MOSconfig/vim-config)) is a personal Vim configuration. There is no build, no package manager, and no test suite. The repository **is** the live Vim runtime directory: `install.sh` symlinks the checkout itself to `~/.vim`, so an edit to a tracked file changes the running editor on the next Vim start. Nothing needs to be "deployed".
+`vim-config` ([MOSconfig/vim-config](https://github.com/MOSconfig/vim-config)) is a personal Vim configuration. There is no build and no package manager. `tools/` holds the installer's plugin cleanup and its tests (`python3 tools/test-prune-plugins.py`, `python3 tools/test-install.py`); `scripts/` is gitignored by the template, so use `tools/`. The repository **is** the live Vim runtime directory: `install.sh` symlinks the checkout itself to `~/.vim`, so an edit to a tracked file changes the running editor on the next Vim start. Nothing needs to be "deployed".
 
 ```
 ~/.vim            -> <repo root>
@@ -14,6 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 
 `install.sh` date-stamps and moves aside real files, unlinks existing symlinks, then recreates the links. Re-running it is safe. Its backup and unlink loops cover five paths — the four above plus `~/.gvimrc`, which is cleared but never re-linked — so a pre-existing real file at any of them is preserved as `<path>.<YYYYMMDD>` before being replaced.
+
+When real Vim is on `PATH`, it then runs `:PlugInstall` through a minimal init that loads `~/.vimrc.bundles` and `~/.vimrc.private` (the full `vimrc` fails before the theme exists), and `tools/prune-plugins.sh` removes `bundle/` checkouts no longer declared. A checkout with local work (edits, untracked files other than generated `doc/tags`, a stash, or unpushed commits) is kept and listed. Do not swap this for `:PlugClean!`, which deletes without checking.
 
 ## Load order
 
@@ -83,7 +85,7 @@ call plug#end()
 
 ## Verifying a configuration change
 
-There are no tests. Verify by loading the real `vimrc` headlessly and asserting on resolved state — redirect stdin from `/dev/null` so an error prompt cannot hang the run, and write results to a file rather than relying on `:echo`, which is swallowed in silent mode:
+Only the installer has tests (`tools/`). Verify by loading the real `vimrc` headlessly and asserting on resolved state — redirect stdin from `/dev/null` so an error prompt cannot hang the run, and write results to a file rather than relying on `:echo`, which is swallowed in silent mode:
 
 ```sh
 /opt/homebrew/bin/vim -N -u ~/.vimrc \
